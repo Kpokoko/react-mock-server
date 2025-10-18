@@ -1,0 +1,42 @@
+from fastapi import APIRouter, Depends, Response, Request, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from ..schemas import UserCreate, UserRead
+from ..models import User
+from ..db import get_db
+from ..services.session_manager import create_session, get_current_user
+from sqlalchemy.future import select
+from passlib.hash import bcrypt
+from ..common import hash_password, check_password
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+@router.post("/register", response_model=UserRead)
+async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.username == user.username))
+    existing = result.scalars().first()
+    if existing:
+        raise HTTPException(status_code=400, detail="User already exists")
+    user_obj = User(username=user.username, password_hash=hash_password(user.password))
+    db.add(user_obj)
+    await db.commit()
+    await db.refresh(user_obj)
+    return user_obj
+
+@router.post("/login")
+async def login(user: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.username == user.username))
+    db_user = result.scalars().first()
+    if not db_user or not check_password(user.password, db_user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_session(db_user.id)
+    response.set_cookie(key="session_token", value=token, httponly=True)
+    return {"message": "Logged in"}
+
+@router.get("/me", response_model=UserRead)
+async def me(request: Request, db: AsyncSession = Depends(get_db)):
+    user_id = get_current_user(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    return user

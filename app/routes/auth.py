@@ -11,13 +11,17 @@ from ..common import hash_password, check_password
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserRead)
-async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(user: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == user.username))
     existing = result.scalars().first()
+    if user.password != user.passwordRep:
+        raise HTTPException(status_code=400, detail="Password not correct")
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
     user_obj = User(username=user.username, password_hash=hash_password(user.password))
     db.add(user_obj)
+    token = create_session(user_obj.id)
+    response.set_cookie(key="session_token", value=token, httponly=True)
     await db.commit()
     await db.refresh(user_obj)
     return user_obj
@@ -31,6 +35,11 @@ async def login(user: UserAuth, response: Response, db: AsyncSession = Depends(g
     token = create_session(db_user.id)
     response.set_cookie(key="session_token", value=token, httponly=True)
     return {"message": "Logged in"}
+
+@router.post("/logout")
+async def login(response: Response):
+    response.delete_cookie("session_token")
+    return {"message": "Logged out"}
 
 @router.get("/profile")
 async def profile(request: Request, db: AsyncSession = Depends(get_db)):

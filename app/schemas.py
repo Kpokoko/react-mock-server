@@ -8,7 +8,7 @@ from pydantic import BaseModel
 class UserCreate(BaseModel):
     username: str
     password: str
-    password_dub: str
+    passwordRep: str
 
 class UserAuth(BaseModel):
     username: str

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..schemas import UserCreate, UserRead
+from ..schemas import UserCreate, UserRead, UserAuth
 from ..models import User
 from ..db import get_db
 from ..services.session_manager import create_session, get_current_user
@@ -23,7 +23,7 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
     return user_obj
 
 @router.post("/login")
-async def login(user: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
+async def login(user: UserAuth, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == user.username))
     db_user = result.scalars().first()
     if not db_user or not check_password(user.password, db_user.password_hash):

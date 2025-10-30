@@ -36,11 +36,6 @@ async def login(user: UserAuth, response: Response, db: AsyncSession = Depends(g
     response.set_cookie(key="session_token", value=token, httponly=True)
     return {"message": "Logged in"}
 
-@router.post("/logout")
-async def login(response: Response):
-    response.delete_cookie("session_token")
-    return {"message": "Logged out"}
-
 @router.get("/profile")
 async def profile(request: Request, db: AsyncSession = Depends(get_db)):
     # user_id = get_current_user(request)

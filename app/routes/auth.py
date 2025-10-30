@@ -14,7 +14,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(user: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == user.username))
     existing = result.scalars().first()
-    if user.password != user.passwordRep:
+    if user.password != user.confirmPassword:
         raise HTTPException(status_code=400, detail="Password not correct")
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")

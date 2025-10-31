@@ -30,12 +30,13 @@ class PostCreate(BaseModel):
 
 class PostRead(BaseModel):
     id: int
-    author_id: int
-    content: str
-    image_url: Optional[str]
-    created_at: datetime
-    class Config:
-        orm_mode = True
+    user: str
+    userId: int
+    postTime: datetime
+    text: str
+    image: str
+    likes: int
+    comments: list[str]
 
 
 # --- CHAT ---

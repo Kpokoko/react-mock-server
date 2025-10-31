@@ -2,6 +2,8 @@ from typing import List
 
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from ..schemas import UserCreate, UserRead, PostRead, PostCreate
 from ..models import User, Post
 from ..db import get_db
@@ -28,8 +30,24 @@ async def create_post(post: PostCreate, request: Request, db: AsyncSession = Dep
 
 @router.get("/", response_model=List[PostRead])
 async def list_posts(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Post).order_by(Post.created_at.desc()))
-    return result.scalars().all()
+    result = await db.execute(select(Post)
+                              .options(selectinload(Post.author))
+                              .order_by(Post.created_at.desc()))
+
+    res = [
+        PostRead(
+            id = i.id,
+            user = i.author.username,
+            userId = i.author.id,
+            postTime = i.created_at,
+            text = i.content,
+            image = i.image_url,
+            likes = 100,
+            comments = ["scam", "scam"],
+        )
+        for i in result.scalars().all()
+    ]
+    return res
 
 
 @router.get("/{post_id}", response_model=PostRead)

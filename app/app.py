@@ -1,10 +1,16 @@
+import os
+
 from fastapi import FastAPI
-from .routes import auth, posts, chats
+
+from .config import settings
+from .routes import auth, posts, chats, image
 from fastapi.middleware.cors import CORSMiddleware
 from .db import engine, Base
 import asyncio
 
 app = FastAPI(title="FastAPI Session")
+
+os.makedirs(settings.upload_dir, exist_ok=True)
 
 # Указываем, с каких источников разрешены запросы
 origins = [
@@ -24,6 +30,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(posts.router)
 app.include_router(chats.router)
+app.include_router(image.router)
 
 @app.on_event("startup")
 async def on_startup():

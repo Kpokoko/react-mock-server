@@ -21,7 +21,7 @@ async def register(user: UserCreate, response: Response, db: AsyncSession = Depe
     user_obj = User(username=user.username, password_hash=hash_password(user.password))
     db.add(user_obj)
     token = create_session(user_obj.id)
-    response.set_cookie(key="session_token", value=token, httponly=True)
+    response.set_cookie(key="session_token", value=token, httponly=True, secure=False, samesite='none')
     await db.commit()
     await db.refresh(user_obj)
     return user_obj
@@ -33,7 +33,7 @@ async def login(user: UserAuth, response: Response, db: AsyncSession = Depends(g
     if not db_user or not check_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_session(db_user.id)
-    response.set_cookie(key="session_token", value=token, httponly=True)
+    response.set_cookie(key="session_token", value=token, httponly=True, secure=False, samesite='none')
     return {"message": "Logged in"}
 
 @router.get("/profile")

@@ -79,3 +79,11 @@ class Comment(Base):
 
     post = relationship("Post", back_populates="comments")
     author = relationship("User")
+
+class Image(Base):
+    __tablename__ = "images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, unique=True, index=True)
+    filepath = Column(String)
+    content_type = Column(String)

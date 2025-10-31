@@ -4,6 +4,7 @@ class Settings(BaseSettings):
     database_url: str
     secret_key: str
     session_expire_minutes: int = 60
+    upload_dir: str = "uploads"
 
     class Config:
         env_file = ".env"

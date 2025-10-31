@@ -3,8 +3,9 @@ import os
 from fastapi import FastAPI
 
 from .config import settings
-from .routes import auth, posts, chats, image
+from .routes import auth, posts, chats, image, profile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .db import engine, Base
 import asyncio
 
@@ -27,10 +28,13 @@ app.add_middleware(
     allow_headers=["*"],            # разрешаем все заголовки
 )
 
+app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
+
 app.include_router(auth.router)
 app.include_router(posts.router)
 app.include_router(chats.router)
 app.include_router(image.router)
+app.include_router(profile.router)
 
 @app.on_event("startup")
 async def on_startup():

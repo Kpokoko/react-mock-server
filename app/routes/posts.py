@@ -65,4 +65,13 @@ async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
     post = result.scalars().first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    return post
+    return PostRead(
+        id=post.id,
+        user=post.author.username,
+        userId=post.author.id,
+        postTime=post.created_at,
+        text=post.content,
+        image=post.image_url,
+        likes=100,
+        comments=["scam", "scam"],
+    )

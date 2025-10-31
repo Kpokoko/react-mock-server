@@ -66,3 +66,10 @@ class MessageRead(BaseModel):
     created_at: datetime
     class Config:
         orm_mode = True
+
+
+# --- IMAGES ---
+class ImageRead(BaseModel):
+    id: int
+    filename: str
+    filepath: str

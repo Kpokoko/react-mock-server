@@ -41,7 +41,6 @@ async def create_post(post: PostCreate, request: Request, db: AsyncSession = Dep
 @router.get("/", response_model=List[PostRead])
 async def list_posts(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Post)
-                              .options(selectinload(Post.author))
                               .order_by(Post.created_at.desc()))
 
     res = [

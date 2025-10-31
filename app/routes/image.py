@@ -9,11 +9,12 @@ import uuid
 from ..config import settings
 from ..models import Image
 from ..db import get_db
+from ..schemas import ImageRead
 
 router = APIRouter(prefix="/image", tags=["image"])
 
 @router.post("/load")
-async def upload_image(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_image(file: UploadFile = File(...), db: Session = Depends(get_db), response_model=ImageRead):
     if not file.content_type.startswith("image/"):
         return JSONResponse(content={"error": "File is not an image"}, status_code=400)
 
@@ -36,9 +37,8 @@ async def upload_image(file: UploadFile = File(...), db: Session = Depends(get_d
     db.commit()
     db.refresh(image_record)
 
-    return {
-        "id": image_record.id,
-        "filename": image_record.filename,
-        "path": image_record.filepath,
-        "content_type": image_record.content_type,
-    }
+    return ImageRead(
+        id = image_record.id,
+        filename = image_record.filename,
+        filepath = image_record.filepath,
+    )

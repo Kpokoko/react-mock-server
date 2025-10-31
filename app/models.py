@@ -65,7 +65,7 @@ class Post(Base):
     updated_at = Column(DateTime, onupdate=datetime.utcnow)
     is_published = Column(Boolean, default=True)  # можно скрывать посты
 
-    author = relationship("User", back_populates="posts")
+    author = relationship("User", back_populates="posts", lazy="selectin")
     comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
 
 class Comment(Base):

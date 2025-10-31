@@ -25,7 +25,17 @@ async def create_post(post: PostCreate, request: Request, db: AsyncSession = Dep
     db.add(post_obj)
     await db.commit()
     await db.refresh(post_obj)
-    return post_obj
+    res = PostRead(
+        id=post_obj.id,
+        user=post_obj.author.username,
+        userId=post_obj.author.id,
+        postTime=post_obj.created_at,
+        text=post_obj.content,
+        image=post_obj.image_url,
+        likes=100,
+        comments=["scam", "scam"],
+    )
+    return res
 
 
 @router.get("/", response_model=List[PostRead])

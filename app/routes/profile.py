@@ -23,7 +23,7 @@ async def profile(request: Request, db: AsyncSession = Depends(get_db)):
     posts = await db.execute(select(Post).where(Post.author_id == user_id))
     user = result.scalars().first()
     res = {
-        "userId"
+        "userId": user.id,
         "name": user.username,
         "friendCount": 100,
         "photoCount": 20,

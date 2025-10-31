@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import FastAPI, File, UploadFile, Depends, APIRouter
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import os
 import uuid
 
@@ -13,8 +13,8 @@ from ..schemas import ImageRead
 
 router = APIRouter(prefix="/image", tags=["image"])
 
-@router.post("/load")
-async def upload_image(file: UploadFile = File(...), db: Session = Depends(get_db), response_model=ImageRead):
+@router.post("/load", response_model=ImageRead)
+async def upload_image(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     if not file.content_type.startswith("image/"):
         return JSONResponse(content={"error": "File is not an image"}, status_code=400)
 
@@ -34,8 +34,8 @@ async def upload_image(file: UploadFile = File(...), db: Session = Depends(get_d
         content_type=file.content_type,
     )
     db.add(image_record)
-    db.commit()
-    db.refresh(image_record)
+    await db.commit()
+    await db.refresh(image_record)
 
     return ImageRead(
         id = image_record.id,

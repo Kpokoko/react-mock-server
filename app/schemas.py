@@ -25,7 +25,7 @@ class UserRead(BaseModel):
 # --- POST ---
 class PostCreate(BaseModel):
     content: str
-    image_url: Optional[str] = None
+    imgUrl: Optional[str] = None
 
 
 class PostRead(BaseModel):
@@ -34,7 +34,7 @@ class PostRead(BaseModel):
     userId: int
     postTime: datetime
     text: str
-    image: str
+    image: str | None
     likes: int
     comments: list[str]
 

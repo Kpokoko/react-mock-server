@@ -21,7 +21,7 @@ async def create_post(post: PostCreate, request: Request, db: AsyncSession = Dep
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    post_obj = Post(author_id=user_id, content=post.content, image_url=post.image_url)
+    post_obj = Post(author_id=user_id, content=post.content, image_url=post.imgUrl)
     db.add(post_obj)
     await db.commit()
     await db.refresh(post_obj)

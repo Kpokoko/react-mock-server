@@ -25,7 +25,7 @@ class UserRead(BaseModel):
 # --- POST ---
 class PostCreate(BaseModel):
     content: str
-    image_url: Optional[str] = None
+    imgUrl: Optional[str] = None
 
 
 class PostRead(BaseModel):

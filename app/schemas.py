@@ -34,7 +34,7 @@ class PostRead(BaseModel):
     userId: int
     postTime: datetime
     text: str
-    image: str
+    image: str | None
     likes: int
     comments: list[str]
 

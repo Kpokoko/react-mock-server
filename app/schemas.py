@@ -73,3 +73,7 @@ class ImageRead(BaseModel):
     id: int
     filename: str
     filepath: str
+
+
+# --- FRIEND ---
+# class Friend

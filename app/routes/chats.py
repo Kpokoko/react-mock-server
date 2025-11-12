@@ -3,12 +3,19 @@ from typing import List
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..schemas import ChatRead, ChatCreate, MessageRead, MessageCreate
-from ..models import Chat, Message
+from ..models import Chat, Message, ChatMember
 from ..db import get_db
 from ..services.session_manager import create_session, get_current_user
 from sqlalchemy.future import select
 
 router = APIRouter(prefix="/chats", tags=["chats"])
+
+async def is_chat_member(db, user_id, chat_id):
+    result = await db.execute(select(ChatMember).where(ChatMember.chat_id == chat_id).where(ChatMember.user_id == user_id))
+    if result.scalars.all():
+        return True
+    return False
+
 
 @router.post("/", response_model=ChatRead)
 async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Depends(get_db)):
@@ -24,8 +31,14 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
 
 
 @router.get("/", response_model=List[ChatRead])
-async def list_chats(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Chat))
+async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
+    user_id = get_current_user(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    result = await db.execute(select(Chat)
+                              .join(ChatMember, ChatMember.chat_id == Chat.id)
+                              .where(ChatMember.user_id == user_id))
     return result.scalars().all()
 
 
@@ -41,6 +54,9 @@ async def send_message(chat_id: int, msg: MessageCreate, request: Request, db: A
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
+    if not is_chat_member(db, user_id, chat_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     message = Message(chat_id=chat_id, sender_id=user_id, content=msg.content)
     db.add(message)
     await db.commit()
@@ -49,7 +65,16 @@ async def send_message(chat_id: int, msg: MessageCreate, request: Request, db: A
 
 
 @router.get("/{chat_id}/messages", response_model=List[MessageRead])
-async def get_messages(chat_id: int, db: AsyncSession = Depends(get_db)):
+async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depends(get_db)):
+    user_id = get_current_user(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    result = await db.execute(select(Chat).where(Chat.id == chat_id))
+    chat = result.scalars().first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    if not is_chat_member(db, user_id, chat_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
     result = await db.execute(
         select(Message).where(Message.chat_id == chat_id).order_by(Message.created_at.asc())
     )

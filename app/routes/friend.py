@@ -1,32 +1,65 @@
-from typing import List
-
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..schemas import ChatRead, ChatCreate, MessageRead, MessageCreate
-from ..models import Chat, ChatMember, Friend
+from ..schemas import FriendCreate, FriendRead
+from ..models import Friend, User
 from ..db import get_db
 from ..services.session_manager import create_session, get_current_user
 from sqlalchemy.future import select
 
 router = APIRouter(prefix="/friend", tags=["friend"])
 
-async def is_friend(db, user_id, friend_id):
+async def get_friend(db, user_id, friend_id):
     result = await db.execute(select(Friend).where(Friend.user_id == user_id).where(Friend.friend_id == friend_id))
-    if result.scalars.all():
-        return True
-    return False
+    friend = result.scalars().first()
+    return friend
 
 
-@router.post("/", response_model=ChatRead)
-async def create_friend(chat: ChatCreate, request: Request, db: AsyncSession = Depends(get_db)):
+@router.post("/", response_model=FriendRead)
+async def create_friend(friend: FriendCreate, request: Request, db: AsyncSession = Depends(get_db)):
     user_id = get_current_user(request)
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    if user_id == friend.friendId:
+        raise HTTPException(status_code=400)
 
-    chat_obj = Chat(name=chat.name, is_group=chat.is_group)
-    db.add(chat_obj)
+    user = await db.execute(select(User).where(User.id == friend.friendId))
+    if not user.scalars().first():
+        raise HTTPException(status_code=400)
+
+    post_friend = await get_friend(db, user_id, friend.friendId)
+    my_friend = await get_friend(db, friend.friendId, user_id)
+
+    if post_friend or my_friend and my_friend.status == "accepted":
+        raise HTTPException(status_code=400, detail="Request has already been sent")
+
+    if my_friend:
+        friend_obj = Friend(user_id=user_id, friend_id=friend.friendId, status="accepted")
+        my_friend.status = "accepted"
+    else:
+        friend_obj = Friend(user_id=user_id, friend_id=friend.friendId, status="pending")
+
+    db.add(friend_obj)
     await db.commit()
-    await db.refresh(chat_obj)
-    return chat_obj
+    await db.refresh(friend_obj)
+    return friend_obj
 
+@router.delete("/{friend_id}", status_code=204)
+async def delete_friend(friend_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user_id = get_current_user(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    friend_link = await get_friend(db, user_id, friend_id)
+    reverse_link = await get_friend(db, friend_id, user_id)
+
+    if not friend_link and not reverse_link:
+        raise HTTPException(status_code=404, detail="Friendship not found")
+
+    if friend_link:
+        await db.delete(friend_link)
+    if reverse_link:
+        await db.delete(reverse_link)
+
+    await db.commit()
+    return Response(status_code=204)

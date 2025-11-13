@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 
 from .db import Base
 
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -14,6 +15,19 @@ class User(Base):
     messages_sent = relationship("Message", back_populates="sender")
     chats = relationship("ChatMember", back_populates="user")
     posts = relationship("Post", back_populates="author")
+
+    friends = relationship(
+        "Friend",
+        foreign_keys="[Friend.user_id]",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    friend_of = relationship(
+        "Friend",
+        foreign_keys="[Friend.friend_id]",
+        back_populates="friend",
+        cascade="all, delete-orphan"
+    )
 
 
 class Chat(Base):
@@ -58,15 +72,16 @@ class Post(Base):
 
     id = Column(Integer, primary_key=True)
     author_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    title = Column(String(255))                   # необязательно — если хочешь поддерживать заголовки
-    content = Column(Text, nullable=False)        # текст поста
-    image_url = Column(String(255))               # если есть картинка
+    title = Column(String(255))
+    content = Column(Text, nullable=False)
+    image_url = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, onupdate=datetime.utcnow)
-    is_published = Column(Boolean, default=True)  # можно скрывать посты
+    is_published = Column(Boolean, default=True)
 
     author = relationship("User", back_populates="posts", lazy="selectin")
     comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
+
 
 class Comment(Base):
     __tablename__ = 'comments'
@@ -80,6 +95,7 @@ class Comment(Base):
     post = relationship("Post", back_populates="comments")
     author = relationship("User")
 
+
 class Image(Base):
     __tablename__ = "images"
 
@@ -88,25 +104,36 @@ class Image(Base):
     filepath = Column(String)
     content_type = Column(String)
 
-# class Like(Base):
-#     __tablename__ = "likes"
-#
-#     id = Column(Integer, primary_key=True, index=True)
-#     post_id = Column(Integer, ForeignKey('posts.id'), nullable=False)
-#     author_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-#     created_at = Column(DateTime, default=datetime.utcnow)
-#
-#     post = relationship("Post", back_populates="comments")
-#     author = relationship("User")
 
-# class Friend(Base):
-#     __tabelname__ = "friends"
-#
-#     id = Column(Integer, primary_key=True, index=True)
-#     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-#     friend_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-#     status = Column(String(255))
-#     created_at = Column(DateTime, default=datetime.utcnow)
-#
-#     friend = relationship("User")
-#     user = relationship("User")
+class Like(Base):
+    __tablename__ = "likes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    post_id = Column(Integer, ForeignKey('posts.id'), nullable=False)
+    author_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    post = relationship("Post")
+    author = relationship("User")
+
+
+class Friend(Base):
+    __tablename__ = "friends"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    friend_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    status = Column(String(255))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    # updated_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship(
+        "User",
+        foreign_keys=[user_id],
+        back_populates="friends"
+    )
+    friend = relationship(
+        "User",
+        foreign_keys=[friend_id],
+        back_populates="friend_of"
+    )

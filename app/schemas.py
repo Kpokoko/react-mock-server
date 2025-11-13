@@ -38,6 +38,10 @@ class PostRead(BaseModel):
     likes: int
     comments: list[str]
 
+class PostUpdate(BaseModel):
+    text: str | None = None
+    image: str | None = None
+
 
 # --- CHAT ---
 class ChatCreate(BaseModel):
@@ -76,4 +80,11 @@ class ImageRead(BaseModel):
 
 
 # --- FRIEND ---
-# class Friend
+class FriendCreate(BaseModel):
+    friendId: int
+
+class FriendRead(BaseModel):
+    id: int
+    user_id: int
+    friend_id: int
+    status: str

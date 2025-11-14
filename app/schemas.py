@@ -73,6 +73,13 @@ class ChatRead(BaseModel):
         orm_mode = True
 
 
+class ChatSend(BaseModel):
+    name: str
+    preview: str
+    chatTime: datetime
+    chatBadge: Optional[bool]
+
+
 # --- MESSAGE ---
 class MessageCreate(BaseModel):
     content: str

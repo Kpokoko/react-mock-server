@@ -31,6 +31,7 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
     await db.commit()
     await db.refresh(chat_obj)
     return ChatSend(
+            id = chat.id,
             name = chat.name,
             preview = '...',
             chatTime = datetime.datetime.utcnow()
@@ -47,6 +48,7 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
     result = await db.execute(select(Message).where(Message.chat_id == chat_id).order_by(Message.created_at.desc()).limit(1))
     message = result.scalars().first()
     return ChatSend(
+            id = chat.id,
             name = chat.name,
             preview = message.content,
             chatTime = message.created_at
@@ -68,6 +70,7 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
             select(Message).where(Message.chat_id == c.id).order_by(Message.created_at.desc()).limit(1))
         message = result.scalars().first()
         res.append(ChatSend(
+            id = c.id,
             name = c.name,
             preview = message.content if message else "...",
             chatTime = message.created_at if message else datetime.datetime.utcnow()

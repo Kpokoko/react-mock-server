@@ -74,6 +74,7 @@ class ChatRead(BaseModel):
 
 
 class ChatSend(BaseModel):
+    id: int
     name: str
     preview: str
     chatTime: datetime

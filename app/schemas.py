@@ -22,6 +22,22 @@ class UserRead(BaseModel):
     class Config:
         orm_mode = True
 
+
+# --- COMMENT ---
+class CommentCreate(BaseModel):
+    postId: int
+    content: str
+
+
+class CommentRead(BaseModel):
+    id: int
+    postId: int
+    userId: int
+    username: str
+    content: str
+    createdAt: datetime
+
+
 # --- POST ---
 class PostCreate(BaseModel):
     content: str
@@ -36,7 +52,7 @@ class PostRead(BaseModel):
     text: str
     image: str | None
     likes: int
-    comments: list[str]
+    comments: list[CommentRead] | list[str]
 
 class PostUpdate(BaseModel):
     text: str | None = None

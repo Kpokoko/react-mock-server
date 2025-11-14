@@ -29,6 +29,8 @@ class User(Base):
         cascade="all, delete-orphan"
     )
 
+    comments = relationship("Comment", back_populates="author", cascade="all, delete-orphan")
+
 
 class Chat(Base):
     __tablename__ = 'chats'

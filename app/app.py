@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 
 from .config import settings
-from .routes import auth, posts, chats, image, profile, friend
+from .routes import auth, posts, chats, image, profile, friend, comments
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .db import engine, Base
@@ -36,6 +36,7 @@ app.include_router(chats.router)
 app.include_router(image.router)
 app.include_router(profile.router)
 app.include_router(friend.router)
+app.include_router(comments.router)
 
 @app.on_event("startup")
 async def on_startup():

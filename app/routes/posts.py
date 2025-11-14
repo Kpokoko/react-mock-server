@@ -4,13 +4,11 @@ from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..schemas import UserCreate, UserRead, PostRead, PostCreate, PostUpdate
-from ..models import User, Post
+from ..schemas import PostRead, PostCreate, PostUpdate, CommentRead
+from ..models import Post, Comment
 from ..db import get_db
-from ..services.session_manager import create_session, get_current_user
+from ..services.session_manager import get_current_user
 from sqlalchemy.future import select
-from passlib.hash import bcrypt
-from ..common import hash_password, check_password
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -33,38 +31,71 @@ async def create_post(post: PostCreate, request: Request, db: AsyncSession = Dep
         text=post_obj.content,
         image=post_obj.image_url,
         likes=100,
-        comments=["scam", "scam"],
+        comments=[],
     )
     return res
 
 
 @router.get("/", response_model=List[PostRead])
 async def list_posts(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Post)
-                              .order_by(Post.created_at.desc()))
-
-    res = [
-        PostRead(
-            id = i.id,
-            user = i.author.username,
-            userId = i.author.id,
-            postTime = i.created_at,
-            text = i.content,
-            image = i.image_url,
-            likes = 100,
-            comments = ["scam", "scam"],
+    result = await db.execute(
+        select(Post)
+        .options(
+            selectinload(Post.comments).selectinload(Comment.author),
+            selectinload(Post.author),
         )
-        for i in result.scalars().all()
-    ]
+        .order_by(Post.created_at.desc())
+    )
+
+    posts = result.scalars().all()
+
+    res = []
+    for post in posts:
+        comments_list = [
+            CommentRead(
+                id=c.id,
+                postId=c.post_id,
+                userId=c.author_id,
+                username=c.author.username,
+                content=c.content,
+                createdAt=c.created_at
+            )
+            for c in post.comments
+        ]
+
+        res.append(
+            PostRead(
+                id=post.id,
+                user=post.author.username,
+                userId=post.author.id,
+                postTime=post.created_at,
+                text=post.content,
+                image=post.image_url,
+                likes=100,
+                comments=comments_list,
+            )
+        )
+
     return res
 
 
 @router.get("/{post_id}", response_model=PostRead)
 async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Post).where(Post.id == post_id).where(Post.is_published == True))
+    result = await db.execute(select(Post).where(Post.id == post_id).where(Post.is_published == True).options(selectinload(Post.comments)))
     post = result.scalars().first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+    comments_list = [
+        CommentRead(
+            id=c.id,
+            postId=c.post_id,
+            userId=c.author_id,
+            username=c.author.username,
+            content=c.content,
+            createdAt=c.created_at
+        )
+        for c in post.comments
+    ]
     return PostRead(
         id=post.id,
         user=post.author.username,
@@ -73,7 +104,7 @@ async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
         text=post.content,
         image=post.image_url,
         likes=100,
-        comments=["scam", "scam"],
+        comments=comments_list,
     )
 
 @router.post("/{post_id}")

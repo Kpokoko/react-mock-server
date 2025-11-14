@@ -95,6 +95,13 @@ class MessageRead(BaseModel):
         orm_mode = True
 
 
+class MessageSend(BaseModel):
+    direction: str
+    name: str
+    message: str
+    time: datetime
+
+
 # --- IMAGES ---
 class ImageRead(BaseModel):
     id: int

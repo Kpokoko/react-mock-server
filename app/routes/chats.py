@@ -1,12 +1,14 @@
 import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, Response, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..schemas import ChatRead, ChatCreate, MessageRead, MessageCreate, ChatSend
+from sqlalchemy.orm import selectinload
+
+from ..schemas import ChatCreate, MessageRead, MessageCreate, ChatSend, MessageSend
 from ..models import Chat, Message, ChatMember
 from ..db import get_db
-from ..services.session_manager import create_session, get_current_user
+from ..services.session_manager import get_current_user
 from sqlalchemy.future import select
 
 router = APIRouter(prefix="/chats", tags=["chats"])
@@ -94,7 +96,7 @@ async def send_message(chat_id: int, msg: MessageCreate, request: Request, db: A
     return message
 
 
-@router.get("/{chat_id}/messages", response_model=List[MessageRead])
+@router.get("/{chat_id}/messages", response_model=List[MessageSend])
 async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depends(get_db)):
     user_id = get_current_user(request)
     if not user_id:
@@ -106,6 +108,21 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
     if not is_chat_member(db, user_id, chat_id):
         raise HTTPException(status_code=403, detail="Forbidden")
     result = await db.execute(
-        select(Message).where(Message.chat_id == chat_id).order_by(Message.created_at.asc())
+        select(Message)
+        .where(Message.chat_id == chat_id)
+        .order_by(Message.created_at.asc()
+        .options(selectinload(Message.sender))
+        )
     )
-    return result.scalars().all()
+    messages = result.scalars().all()
+    res = []
+    for m in messages:
+        direction = 'recieved'
+        if user_id == m.sender_id:
+            direction = 'send'
+        res.append(MessageSend(
+            direction=direction,
+            name=m.sender.username,
+            message=m.content,
+            time=m.created_at,
+        ))

@@ -67,7 +67,7 @@ class ChatCreate(BaseModel):
 
 class ChatRead(BaseModel):
     id: int
-    name: Optional[str]
+    name: Optional[str] = None
     is_group: bool
     class Config:
         orm_mode = True
@@ -77,7 +77,7 @@ class ChatSend(BaseModel):
     name: str
     preview: str
     chatTime: datetime
-    chatBadge: Optional[bool]
+    chatBadge: Optional[int] = None
 
 
 # --- MESSAGE ---

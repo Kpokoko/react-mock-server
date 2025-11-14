@@ -107,7 +107,7 @@ async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
         comments=comments_list,
     )
 
-@router.post("/{post_id}")
+@router.put("/{post_id}")
 async def update_post(updates: PostUpdate, post_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user_id = get_current_user(request)
     if not user_id:

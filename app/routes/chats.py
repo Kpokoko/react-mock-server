@@ -58,9 +58,9 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    result = await db.execute(select(Chat)
-                              .join(ChatMember, ChatMember.chat_id == Chat.id)
-                              .where(ChatMember.user_id == user_id))
+    result = await db.execute(select(Chat))
+                              # .join(ChatMember, ChatMember.chat_id == Chat.id)
+                              # .where(ChatMember.user_id == user_id))
     chats = result.scalars().all()
     res = []
     for c in chats:
@@ -69,8 +69,8 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
         message = result.scalars().first()
         res.append(ChatSend(
             name = c.name,
-            preview = message.content,
-            chatTime = message.created_at
+            preview = message.content if message else "...",
+            chatTime = message.created_at if message else datetime.datetime.utcnow()
         ))
     return res
 

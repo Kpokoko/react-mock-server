@@ -109,9 +109,9 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
         raise HTTPException(status_code=403, detail="Forbidden")
     result = await db.execute(
         select(Message)
+        .options(selectinload(Message.sender))
         .where(Message.chat_id == chat_id)
         .order_by(Message.created_at.asc()
-        .options(selectinload(Message.sender))
         )
     )
     messages = result.scalars().all()
@@ -126,3 +126,4 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
             message=m.content,
             time=m.created_at,
         ))
+    return res

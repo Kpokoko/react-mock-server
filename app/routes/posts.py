@@ -107,7 +107,7 @@ async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
         comments=comments_list,
     )
 
-@router.put("/{post_id}")
+@router.patch("/{post_id}")
 async def update_post(updates: PostUpdate, post_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user_id = get_current_user(request)
     if not user_id:
@@ -117,12 +117,8 @@ async def update_post(updates: PostUpdate, post_id: int, request: Request, db: A
     post = result.scalars().first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-
-    for field, value in updates.items():
-        if field == "text":
-            post.content = value
-        elif field == "image":
-            post.image_url = value
+    post.content = updates.text
+    post.image_url = updates.image
 
     await db.commit()
     await db.refresh(post)
@@ -140,5 +136,6 @@ async def delete_post(post_id: int, request: Request, db: AsyncSession = Depends
         raise HTTPException(status_code=404, detail="Post not found")
 
     await db.delete(post)
+    await db.commit()
     return Response(status_code=204)
 

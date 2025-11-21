@@ -30,19 +30,22 @@ async def create_post(post: PostCreate, request: Request, db: AsyncSession = Dep
         postTime=post_obj.created_at,
         text=post_obj.content,
         image=post_obj.image_url,
-        likes=100,
+        likes=0,
+        isLiked=False,
         comments=[],
     )
     return res
 
 
 @router.get("/", response_model=List[PostRead])
-async def list_posts(db: AsyncSession = Depends(get_db)):
+async def list_posts(request: Request, db: AsyncSession = Depends(get_db)):
+    user_id = get_current_user(request)
     result = await db.execute(
         select(Post)
         .options(
             selectinload(Post.comments).selectinload(Comment.author),
             selectinload(Post.author),
+            selectinload(Post.likes),
         )
         .order_by(Post.created_at.desc())
     )
@@ -63,6 +66,13 @@ async def list_posts(db: AsyncSession = Depends(get_db)):
             for c in post.comments
         ]
 
+        is_liked = False
+        if user_id and hasattr(post, 'likes'):
+            for l in post.likes:
+                if getattr(l, 'author_id', None) == user_id:
+                    is_liked = True
+                    break
+
         res.append(
             PostRead(
                 id=post.id,
@@ -71,7 +81,8 @@ async def list_posts(db: AsyncSession = Depends(get_db)):
                 postTime=post.created_at,
                 text=post.content,
                 image=post.image_url,
-                likes=100,
+                likes=len(post.likes) if hasattr(post, 'likes') else 0,
+                isLiked=is_liked,
                 comments=comments_list,
             )
         )
@@ -80,8 +91,9 @@ async def list_posts(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{post_id}", response_model=PostRead)
-async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Post).where(Post.id == post_id).where(Post.is_published == True).options(selectinload(Post.comments)))
+async def get_post(post_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user_id = get_current_user(request)
+    result = await db.execute(select(Post).where(Post.id == post_id).where(Post.is_published == True).options(selectinload(Post.comments).selectinload(Comment.author), selectinload(Post.likes), selectinload(Post.author)))
     post = result.scalars().first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -96,6 +108,14 @@ async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
         )
         for c in post.comments
     ]
+
+    is_liked = False
+    if user_id and hasattr(post, 'likes'):
+        for l in post.likes:
+            if getattr(l, 'author_id', None) == user_id:
+                is_liked = True
+                break
+
     return PostRead(
         id=post.id,
         user=post.author.username,
@@ -103,9 +123,11 @@ async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
         postTime=post.created_at,
         text=post.content,
         image=post.image_url,
-        likes=100,
+        likes=len(post.likes) if hasattr(post, 'likes') else 0,
+        isLiked=is_liked,
         comments=comments_list,
     )
+
 
 @router.patch("/{post_id}")
 async def update_post(updates: PostUpdate, post_id: int, request: Request, db: AsyncSession = Depends(get_db)):
@@ -123,6 +145,7 @@ async def update_post(updates: PostUpdate, post_id: int, request: Request, db: A
     await db.commit()
     await db.refresh(post)
     return Response(status_code=204)
+
 
 @router.delete("/{post_id}")
 async def delete_post(post_id: int, request: Request, db: AsyncSession = Depends(get_db)):

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..schemas import UserCreate, UserRead, PostRead, PostCreate, CommentRead
-from ..models import User, Post, Comment
+from ..models import User, Post, Comment, Friend
 from ..db import get_db
 from ..services.session_manager import create_session, get_current_user
 from sqlalchemy.future import select
@@ -23,6 +23,7 @@ async def profile(request: Request, db: AsyncSession = Depends(get_db)):
     posts = await db.execute(select(Post).options(
             selectinload(Post.comments).selectinload(Comment.author),
             selectinload(Post.author),
+            selectinload(Post.likes),
         )
         .where(Post.author_id == user_id))
     user = result.scalars().first()
@@ -48,17 +49,25 @@ async def profile(request: Request, db: AsyncSession = Depends(get_db)):
                 postTime=post.created_at,
                 text=post.content,
                 image=post.image_url,
-                likes=100,
+                likes=len(post.likes) if hasattr(post, 'likes') else 0,
+                isLiked=any(getattr(l, 'author_id', None) == user_id for l in post.likes) if hasattr(post, 'likes') else False,
                 comments=comments_list,
             )
         )
 
+    # compute friend and subscriber counts
+    friends_res = await db.execute(select(Friend).where(Friend.user_id == user.id).where(Friend.status == "accepted"))
+    friend_count = len(friends_res.scalars().all())
+
+    subs_res = await db.execute(select(Friend).where(Friend.friend_id == user.id).where(Friend.status == "pending"))
+    subscriber_count = len(subs_res.scalars().all())
+
     res = {
         "userId": user.id,
         "name": user.username,
-        "friendCount": 100,
+        "friendCount": friend_count,
         "photoCount": 20,
-        "subscriberCount": 6,
+        "subscriberCount": subscriber_count,
         "posts": res_post
     }
     return res

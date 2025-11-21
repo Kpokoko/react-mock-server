@@ -83,6 +83,7 @@ class Post(Base):
 
     author = relationship("User", back_populates="posts", lazy="selectin")
     comments = relationship("Comment", back_populates="post", cascade="all, delete-orphan")
+    likes = relationship("Like", back_populates="post", cascade="all, delete-orphan")
 
 
 class Comment(Base):
@@ -115,7 +116,7 @@ class Like(Base):
     author_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    post = relationship("Post")
+    post = relationship("Post", back_populates="likes")
     author = relationship("User")
 
 

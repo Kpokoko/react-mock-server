@@ -52,6 +52,7 @@ class PostRead(BaseModel):
     text: str
     image: str | None
     likes: int
+    isLiked: bool
     comments: list[CommentRead] | list[str]
 
 class PostUpdate(BaseModel):
@@ -119,3 +120,18 @@ class FriendRead(BaseModel):
     user_id: int
     friend_id: int
     status: str
+
+
+# --- LIKE ---
+class LikeCreate(BaseModel):
+    postId: int
+
+
+class LikeRead(BaseModel):
+    id: int
+    postId: int
+    authorId: int
+    createdAt: datetime
+
+    class Config:
+        orm_mode = True

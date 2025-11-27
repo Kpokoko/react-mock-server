@@ -26,7 +26,7 @@ async def register(user: UserCreate, response: Response, db: AsyncSession = Depe
     response.set_cookie(key="session_token", value=token, httponly=True, secure=False, samesite='lax')
     return user_obj
 
-@router.post("/login")
+@router.post("/login", response_model=UserRead)
 async def login(user: UserAuth, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == user.username))
     db_user = result.scalars().first()
@@ -34,4 +34,4 @@ async def login(user: UserAuth, response: Response, db: AsyncSession = Depends(g
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_session(db_user.id)
     response.set_cookie(key="session_token", value=token, httponly=True, secure=False, samesite='lax')
-    return {"message": "Logged in"}
+    return db_user

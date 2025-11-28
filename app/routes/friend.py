@@ -63,3 +63,39 @@ async def delete_friend(friend_id: int, request: Request, db: AsyncSession = Dep
 
     await db.commit()
     return Response(status_code=204)
+
+
+@router.get("/{user_id}", response_model=list[FriendRead])
+async def list_friends(user_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    # current_user = get_current_user(request)
+    # if not current_user:
+    #     raise HTTPException(status_code=401, detail="Not authenticated")
+
+    result = await db.execute(
+        select(Friend).where(Friend.user_id == user_id).where(Friend.status == "accepted")
+    )
+    friends = result.scalars().all()
+
+    return [
+        FriendRead(id=f.id, user_id=f.user_id, friend_id=f.friend_id, status=f.status)
+        for f in friends
+    ]
+
+
+@router.get("/subscribers/{user_id}", response_model=list[FriendRead])
+async def list_subscribers(user_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    # current_user = get_current_user(request)
+    # if not current_user:
+    #     raise HTTPException(status_code=401, detail="Not authenticated")
+
+    result = await db.execute(
+        select(Friend).where(Friend.friend_id == user_id).where(Friend.status == "pending")
+    )
+    subs = result.scalars().all()
+
+    return [
+        FriendRead(id=s.id, user_id=s.user_id, friend_id=s.friend_id, status=s.status)
+        for s in subs
+    ]
+
+

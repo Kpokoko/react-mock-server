@@ -62,8 +62,7 @@ class PostUpdate(BaseModel):
 
 # --- CHAT ---
 class ChatCreate(BaseModel):
-    name: str
-    is_group: bool = False
+    name: str | None = None
 
 
 class ChatRead(BaseModel):
@@ -80,6 +79,7 @@ class ChatSend(BaseModel):
     preview: str
     chatTime: datetime
     chatBadge: Optional[int] = None
+    chatMembers: list[str] | None = None
 
 
 # --- MESSAGE ---
@@ -135,3 +135,8 @@ class LikeRead(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# --- CHAT MEMBER ---
+class ChatMemberAdd(BaseModel):
+    userId: int

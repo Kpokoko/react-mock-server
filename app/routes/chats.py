@@ -5,17 +5,18 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..schemas import ChatCreate, MessageRead, MessageCreate, ChatSend, MessageSend
-from ..models import Chat, Message, ChatMember
+from ..schemas import ChatCreate, MessageRead, MessageCreate, ChatSend, MessageSend, ChatMemberAdd
+from ..models import Chat, Message, ChatMember, User
 from ..db import get_db
 from ..services.session_manager import get_current_user
 from sqlalchemy.future import select
+from sqlalchemy import func
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
 async def is_chat_member(db, user_id, chat_id):
     result = await db.execute(select(ChatMember).where(ChatMember.chat_id == chat_id).where(ChatMember.user_id == user_id))
-    if result.scalars.all():
+    if result.scalars().all():
         return True
     return False
 
@@ -26,16 +27,73 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    chat_obj = Chat(name=chat.name, is_group=chat.is_group)
+    chat_obj = Chat(name=chat.name, is_group=False)
     db.add(chat_obj)
     await db.commit()
     await db.refresh(chat_obj)
+
+    # Add the current user as a ChatMember
+    chat_member = ChatMember(chat_id=chat_obj.id, user_id=user_id)
+    db.add(chat_member)
+    await db.commit()
+
     return ChatSend(
-            id = chat.id,
-            name = chat.name,
-            preview = '...',
-            chatTime = datetime.datetime.utcnow()
-        )
+        id=chat_obj.id,
+        name=chat.name,
+        preview="...",
+        chatTime=datetime.datetime.utcnow(),
+    )
+
+
+@router.post("/private", response_model=ChatSend)
+async def create_private_chat(member: ChatMemberAdd, request: Request, db: AsyncSession = Depends(get_db)):
+    """Create a private chat between the current user and another user."""
+    current_user = get_current_user(request)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    if current_user == member.userId:
+        raise HTTPException(status_code=400, detail="Cannot create a private chat with yourself")
+
+    # Check if the other user exists
+    result = await db.execute(select(User).where(User.id == member.userId))
+    other_user = result.scalars().first()
+    if not other_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    result = await db.execute(
+        select(Chat)
+        .join(ChatMember, Chat.id == ChatMember.chat_id)
+        .where(Chat.is_group == False)
+        .where(ChatMember.user_id.in_([current_user, member.userId]))
+        .group_by(Chat.id)
+        .having(func.count(ChatMember.user_id) == 2)
+    )
+    existing_chat = result.scalars().first()
+    if existing_chat:
+        raise HTTPException(status_code=400, detail="Private chat already exists")
+
+    # Create the private chat
+    chat = Chat(name=None, is_group=False)
+    db.add(chat)
+    await db.commit()
+    await db.refresh(chat)
+
+    # Add chat members
+    chat_members = [
+        ChatMember(chat_id=chat.id, user_id=current_user),
+        ChatMember(chat_id=chat.id, user_id=member.userId),
+    ]
+    db.add_all(chat_members)
+    await db.commit()
+
+    return ChatSend(
+        id=chat.id,
+        name=str(member.userId),
+        preview="...",
+        chatTime=datetime.datetime.utcnow(),
+    )
+
 
 @router.get("/{chat_id}", response_model=ChatSend)
 async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(get_db)):
@@ -45,14 +103,25 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
 
     result = await db.execute(select(Chat).where(Chat.id == chat_id))
     chat = result.scalars().first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
     result = await db.execute(select(Message).where(Message.chat_id == chat_id).order_by(Message.created_at.desc()).limit(1))
     message = result.scalars().first()
+
+    # Fetch chat members
+    result = await db.execute(select(ChatMember).where(ChatMember.chat_id == chat_id).options(selectinload(ChatMember.user)))
+    members = result.scalars().all()
+    member_names = [m.user.username for m in members]
+
     return ChatSend(
-            id = chat.id,
-            name = chat.name,
-            preview = message.content,
-            chatTime = message.created_at
-        )
+        id=chat.id,
+        name=chat.name,
+        preview=message.content if message else "...",
+        chatTime=message.created_at if message else datetime.datetime.utcnow(),
+        chatMembers=member_names,
+    )
+
 
 @router.get("/", response_model=List[ChatSend])
 async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
@@ -60,20 +129,27 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    result = await db.execute(select(Chat))
-                              # .join(ChatMember, ChatMember.chat_id == Chat.id)
-                              # .where(ChatMember.user_id == user_id))
+    result = await db.execute(select(Chat)
+                              .join(ChatMember, ChatMember.chat_id == Chat.id)
+                              .where(ChatMember.user_id == user_id))
     chats = result.scalars().all()
     res = []
     for c in chats:
         result = await db.execute(
             select(Message).where(Message.chat_id == c.id).order_by(Message.created_at.desc()).limit(1))
         message = result.scalars().first()
+
+        # Fetch chat members
+        result = await db.execute(select(ChatMember).where(ChatMember.chat_id == c.id).options(selectinload(ChatMember.user)))
+        members = result.scalars().all()
+        member_names = [m.user.username for m in members]
+
         res.append(ChatSend(
-            id = c.id,
-            name = c.name,
-            preview = message.content if message else "...",
-            chatTime = message.created_at if message else datetime.datetime.utcnow()
+            id=c.id,
+            name=c.name,
+            preview=message.content if message else "...",
+            chatTime=message.created_at if message else datetime.datetime.utcnow(),
+            chatMembers=member_names,
         ))
     return res
 
@@ -130,3 +206,40 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
             time=m.created_at,
         ))
     return res
+
+
+@router.post("/{chat_id}/members")
+async def add_chat_member(chat_id: int, member: ChatMemberAdd, request: Request, db: AsyncSession = Depends(get_db)):
+    """Add a new member to an existing chat."""
+    current_user = get_current_user(request)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Verify the chat exists
+    result = await db.execute(select(Chat).where(Chat.id == chat_id))
+    chat = result.scalars().first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    # Verify the current user is a member of the chat
+    if not await is_chat_member(db, current_user, chat_id):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Verify the user to be added exists
+    result = await db.execute(select(User).where(User.id == member.userId))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if the user is already a member of the chat
+    result = await db.execute(select(ChatMember).where(ChatMember.chat_id == chat_id).where(ChatMember.user_id == member.userId))
+    existing_member = result.scalars().first()
+    if existing_member:
+        raise HTTPException(status_code=400, detail="User is already a member of the chat")
+
+    # Add the user as a new chat member
+    new_member = ChatMember(chat_id=chat_id, user_id=member.userId)
+    db.add(new_member)
+    await db.commit()
+
+    return {"message": "User added to chat successfully"}

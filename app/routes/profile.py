@@ -71,3 +71,58 @@ async def profile(request: Request, db: AsyncSession = Depends(get_db)):
         "posts": res_post
     }
     return res
+
+
+@router.get("/{user_id}")
+async def other_profile(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    posts = await db.execute(select(Post).options(
+            selectinload(Post.comments).selectinload(Comment.author),
+            selectinload(Post.author),
+            selectinload(Post.likes),
+        )
+        .where(Post.author_id == user_id))
+    user = result.scalars().first()
+    res_post = []
+    for post in posts.scalars().all():
+        comments_list = [
+            CommentRead(
+                id=c.id,
+                postId=c.post_id,
+                userId=c.author_id,
+                username=c.author.username,
+                content=c.content,
+                createdAt=c.created_at
+            )
+            for c in post.comments
+        ]
+
+        res_post.append(
+            PostRead(
+                id=post.id,
+                user=post.author.username,
+                userId=post.author.id,
+                postTime=post.created_at,
+                text=post.content,
+                image=post.image_url,
+                likes=len(post.likes) if hasattr(post, 'likes') else 0,
+                isLiked=any(getattr(l, 'author_id', None) == user_id for l in post.likes) if hasattr(post, 'likes') else False,
+                comments=comments_list,
+            )
+        )
+
+    friends_res = await db.execute(select(Friend).where(Friend.user_id == user.id).where(Friend.status == "accepted"))
+    friend_count = len(friends_res.scalars().all())
+
+    subs_res = await db.execute(select(Friend).where(Friend.friend_id == user.id).where(Friend.status == "pending"))
+    subscriber_count = len(subs_res.scalars().all())
+
+    res = {
+        "userId": user.id,
+        "name": user.username,
+        "friendCount": friend_count,
+        "photoCount": 20,
+        "subscriberCount": subscriber_count,
+        "posts": res_post
+    }
+    return res

@@ -39,7 +39,7 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
 
     return ChatSend(
         id=chat_obj.id,
-        name=chat.name,
+        name=chat.name if chat.name else "Undefined",
         preview="...",
         chatTime=datetime.datetime.utcnow(),
     )

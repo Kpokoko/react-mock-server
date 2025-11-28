@@ -116,7 +116,7 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
 
     return ChatSend(
         id=chat.id,
-        name=chat.name,
+        name=chat.name if chat.name else "Undefined",
         preview=message.content if message else "...",
         chatTime=message.created_at if message else datetime.datetime.utcnow(),
         chatMembers=member_names,
@@ -146,7 +146,7 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
 
         res.append(ChatSend(
             id=c.id,
-            name=c.name,
+            name=c.name if c.name else "Undefined",
             preview=message.content if message else "...",
             chatTime=message.created_at if message else datetime.datetime.utcnow(),
             chatMembers=member_names,

@@ -101,6 +101,9 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    if is_chat_member(db, user_id, chat_id):
+        raise HTTPException(status_code=404, detail="Not authenticated")
+
     result = await db.execute(select(Chat).where(Chat.id == chat_id))
     chat = result.scalars().first()
     if not chat:
@@ -114,9 +117,19 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
     members = result.scalars().all()
     member_names = [m.user.username for m in members]
 
+    mem = None
+    for m in member_names:
+        if m.user.id != user_id:
+            mem = m.user
+
+    if not chat.is_group and mem:
+        name = mem.user.username
+    else:
+        name = chat.name
+
     return ChatSend(
         id=chat.id,
-        name=chat.name if chat.name else "Undefined",
+        name=name if name else "Undefined",
         preview=message.content if message else "...",
         chatTime=message.created_at if message else datetime.datetime.utcnow(),
         chatMembers=member_names,
@@ -144,9 +157,19 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
         members = result.scalars().all()
         member_names = [m.user.username for m in members]
 
+        mem = None
+        for m in members:
+            if m.user.id != user_id:
+                mem = m.user
+
+        if not c.is_group and mem:
+            name = mem.username
+        else:
+            name = c.name
+
         res.append(ChatSend(
             id=c.id,
-            name=c.name if c.name else "Undefined",
+            name=name if name else "Undefined",
             preview=message.content if message else "...",
             chatTime=message.created_at if message else datetime.datetime.utcnow(),
             chatMembers=member_names,

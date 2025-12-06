@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..schemas import FriendCreate, FriendRead
+from ..schemas import FriendCreate, FriendRead, FriendStatus
 from ..models import Friend, User
 from ..db import get_db
 from ..services.session_manager import create_session, get_current_user
@@ -82,8 +82,8 @@ async def list_friends(user_id: int, request: Request, db: AsyncSession = Depend
     ]
 
 
-@router.get("/subscribers/{user_id}", response_model=list[FriendRead])
-async def list_subscribers(user_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+@router.get("/following/{user_id}", response_model=list[FriendRead])
+async def list_following(user_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     # current_user = get_current_user(request)
     # if not current_user:
     #     raise HTTPException(status_code=401, detail="Not authenticated")
@@ -94,8 +94,53 @@ async def list_subscribers(user_id: int, request: Request, db: AsyncSession = De
     subs = result.scalars().all()
 
     return [
+        FriendRead(id=s.id, user_id=s.friend_id, friend_id=s.user_id, status=s.status)
+        for s in subs
+    ]
+
+@router.get("/requests/{user_id}", response_model=list[FriendRead])
+async def list_requests(user_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    # current_user = get_current_user(request)
+    # if not current_user:
+    #     raise HTTPException(status_code=401, detail="Not authenticated")
+
+    result = await db.execute(
+        select(Friend).where(Friend.user_id == user_id).where(Friend.status == "pending")
+    )
+    subs = result.scalars().all()
+
+    return [
         FriendRead(id=s.id, user_id=s.user_id, friend_id=s.friend_id, status=s.status)
         for s in subs
     ]
 
+@router.get("/status/{user_id}/{friend_id}", response_model=FriendStatus)
+async def get_friendship_status(user_id: int, friend_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Friend).where(Friend.user_id == user_id, Friend.friend_id == friend_id)
+    )
+    result2 = await db.execute(
+        select(Friend).where(Friend.user_id == user_id, Friend.friend_id == friend_id)
+    )
+    friend = result.scalars().first()
+    friend2 = result2.scalars().first()
+
+    status = None
+    if friend:
+        status = friend.status
+
+    status2 = None
+    if friend2:
+        status2 = friend2.status
+    
+    if status == 'accepted':
+        return FriendStatus(status="friends")
+    
+    elif status == 'pending':
+        return FriendStatus(status="following")
+    
+    elif status2 == 'pending':
+        return FriendStatus(status="requested")
+    else:
+        return FriendStatus(status="none")
 

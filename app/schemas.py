@@ -145,3 +145,23 @@ class ChatMemberAdd(BaseModel):
 # --- FRIEND STATUS ---
 class FriendStatus(BaseModel):
     status: str
+
+
+# --- SETTINGS ---
+class SettingsCreate(BaseModel):
+    notifications_enabled: Optional[bool] = True
+    theme: Optional[str] = "light"
+
+
+class SettingsRead(BaseModel):
+    user_id: int
+    notifications_enabled: bool
+    theme: str
+
+    class Config:
+        orm_mode = True
+
+
+class SettingsUpdate(BaseModel):
+    notifications_enabled: Optional[bool] = None
+    theme: Optional[str] = None

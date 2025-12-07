@@ -30,6 +30,7 @@ class User(Base):
     )
 
     comments = relationship("Comment", back_populates="author", cascade="all, delete-orphan")
+    settings = relationship("Settings", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
 
 class Chat(Base):
@@ -140,3 +141,14 @@ class Friend(Base):
         foreign_keys=[friend_id],
         back_populates="friend_of"
     )
+
+
+class Settings(Base):
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, unique=True)
+    notifications_enabled = Column(Boolean, default=True)
+    theme = Column(String, default="light")
+
+    user = relationship("User", back_populates="settings")

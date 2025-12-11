@@ -101,7 +101,7 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    if is_chat_member(db, user_id, chat_id):
+    if not await is_chat_member(db, user_id, chat_id):
         raise HTTPException(status_code=404, detail="Not authenticated")
 
     result = await db.execute(select(Chat).where(Chat.id == chat_id))
@@ -118,12 +118,12 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
     member_names = [m.user.username for m in members]
 
     mem = None
-    for m in member_names:
+    for m in members:
         if m.user.id != user_id:
             mem = m.user
 
     if not chat.is_group and mem:
-        name = mem.user.username
+        name = mem.username
     else:
         name = chat.name
 

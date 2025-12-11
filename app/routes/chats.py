@@ -266,3 +266,29 @@ async def add_chat_member(chat_id: int, member: ChatMemberAdd, request: Request,
     await db.commit()
 
     return {"message": "User added to chat successfully"}
+
+
+@router.delete("/{chat_id}/leave")
+async def leave_chat(chat_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    """Allow the current user to leave a chat."""
+    user_id = get_current_user(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Verify the chat exists
+    result = await db.execute(select(Chat).where(Chat.id == chat_id))
+    chat = result.scalars().first()
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    # Verify the user is a member of the chat
+    result = await db.execute(select(ChatMember).where(ChatMember.chat_id == chat_id).where(ChatMember.user_id == user_id))
+    chat_member = result.scalars().first()
+    if not chat_member:
+        raise HTTPException(status_code=403, detail="You are not a member of this chat")
+
+    # Remove the user from the chat
+    await db.delete(chat_member)
+    await db.commit()
+
+    return {"message": "You have left the chat successfully"}

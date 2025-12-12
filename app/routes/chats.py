@@ -27,7 +27,7 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    chat_obj = Chat(name=chat.name, is_group=False)
+    chat_obj = Chat(name=chat.name, is_group=True)
     db.add(chat_obj)
     await db.commit()
     await db.refresh(chat_obj)

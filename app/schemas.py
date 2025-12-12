@@ -63,6 +63,7 @@ class PostUpdate(BaseModel):
 # --- CHAT ---
 class ChatCreate(BaseModel):
     name: str | None = None
+    members: list[int] | None = None
 
 
 class ChatRead(BaseModel):

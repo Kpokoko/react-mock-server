@@ -33,8 +33,21 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
     await db.refresh(chat_obj)
 
     # Add the current user as a ChatMember
-    chat_member = ChatMember(chat_id=chat_obj.id, user_id=user_id)
-    db.add(chat_member)
+    chat_members = [ChatMember(chat_id=chat_obj.id, user_id=user_id)]
+
+    # Add additional members if provided
+    users = None
+    if chat.members:
+        result = await db.execute(select(User).where(User.id.in_(chat.members)))
+        users = result.scalars().all()
+        if len(users) != len(chat.members):
+            raise HTTPException(status_code=404, detail="One or more users not found")
+
+        for member_id in chat.members:
+            if member_id != user_id:  # Avoid adding the current user twice
+                chat_members.append(ChatMember(chat_id=chat_obj.id, user_id=member_id))
+
+    db.add_all(chat_members)
     await db.commit()
 
     return ChatSend(
@@ -42,6 +55,7 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
         name=chat.name if chat.name else "Undefined",
         preview="...",
         chatTime=datetime.datetime.utcnow(),
+        chatMembers=[user.username for user in users] if users else None,
     )
 
 

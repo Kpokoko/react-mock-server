@@ -40,8 +40,8 @@ class Chat(Base):
     name = Column(String(255))
     is_group = Column(Boolean, default=False)
 
-    members = relationship("ChatMember", back_populates="chat")
-    messages = relationship("Message", back_populates="chat")
+    members = relationship("ChatMember", back_populates="chat", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="chat", cascade="save-update")
 
 
 class ChatMember(Base):

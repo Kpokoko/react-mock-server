@@ -301,8 +301,12 @@ async def leave_chat(chat_id: int, request: Request, db: AsyncSession = Depends(
     if not chat_member:
         raise HTTPException(status_code=403, detail="You are not a member of this chat")
 
+    if not chat.is_group:
+        await db.delete(chat)
+
     # Remove the user from the chat
-    await db.delete(chat_member)
+    else:
+        await db.delete(chat_member)
     await db.commit()
 
     return {"message": "You have left the chat successfully"}

@@ -22,6 +22,9 @@ class UserRead(BaseModel):
     class Config:
         orm_mode = True
 
+class UserUpdateAvatar(BaseModel):
+    avatarUrl: str
+
 
 # --- COMMENT ---
 class CommentCreate(BaseModel):

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Response, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..schemas import UserCreate, UserRead, PostRead, PostCreate, CommentRead
+from ..schemas import UserCreate, UserRead, PostRead, PostCreate, CommentRead, UserUpdateAvatar
 from ..models import User, Post, Comment, Friend
 from ..db import get_db
 from ..services.session_manager import create_session, get_current_user
@@ -126,3 +126,15 @@ async def other_profile(user_id: int, db: AsyncSession = Depends(get_db)):
         "posts": res_post
     }
     return res
+
+@router.post("/avatar")
+async def avatar_upload(post: UserUpdateAvatar, request: Request, db: AsyncSession = Depends(get_db)):
+    user_id = get_current_user(request)
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.avatar_url = post.avatarUrl
+    await db.commit()
+    await db.refresh(user)
+    return {"message": "Avatar updated successfully", "avatarUrl": post.avatarUrl}

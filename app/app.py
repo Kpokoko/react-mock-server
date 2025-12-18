@@ -46,6 +46,16 @@ async def on_startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+# ALTER TABLE users
+# ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255),
+# ADD COLUMN IF NOT EXISTS fon_url VARCHAR(255);
+
+
+# try:
+#     init_db(engine)
+# except Exception:
+#     pass
+
 @app.get("/")
 async def root():
     return {"message": "Hello World"}

@@ -11,6 +11,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     password_hash = Column(String)
+    avatar_url = Column(String(255))
+    fon_url = Column(String(255))
 
     messages_sent = relationship("Message", back_populates="sender")
     chats = relationship("ChatMember", back_populates="user")

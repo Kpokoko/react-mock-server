@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 
 from .config import settings
-from .routes import auth, posts, chats, image, profile, friend, comments, like, settings_user
+from .routes import auth, posts, chats, image, profile, friend, comments, like, settings_user, websocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .db import engine, Base
@@ -33,6 +33,7 @@ app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads"
 app.include_router(auth.router)
 app.include_router(posts.router)
 app.include_router(chats.router)
+app.include_router(websocket.router)
 app.include_router(image.router)
 app.include_router(profile.router)
 app.include_router(friend.router)

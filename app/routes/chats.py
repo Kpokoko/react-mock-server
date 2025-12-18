@@ -202,12 +202,28 @@ async def send_message(chat_id: int, msg: MessageCreate, request: Request, db: A
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    if not is_chat_member(db, user_id, chat_id):
+    if not await is_chat_member(db, user_id, chat_id):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     message = Message(chat_id=chat_id, sender_id=user_id, content=msg.content)
     db.add(message)
     await db.commit()
+
+    # Ensure sender is loaded for broadcasting
+    result = await db.execute(
+        select(Message).options(selectinload(Message.sender)).where(Message.id == message.id)
+    )
+    full_message = result.scalars().first()
+
+    # Broadcast to chat members (best-effort; failures won't break the request)
+    try:
+        from .websocket import manager
+        if full_message:
+            await manager.broadcast_chat_message(db, full_message)
+    except Exception:
+        # don't block sending on ws errors
+        pass
+
     await db.refresh(message)
     return message
 
@@ -221,7 +237,7 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
     chat = result.scalars().first()
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
-    if not is_chat_member(db, user_id, chat_id):
+    if not await is_chat_member(db, user_id, chat_id):
         raise HTTPException(status_code=403, detail="Forbidden")
     result = await db.execute(
         select(Message)

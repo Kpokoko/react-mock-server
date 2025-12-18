@@ -35,3 +35,7 @@ async def login(user: UserAuth, response: Response, db: AsyncSession = Depends(g
     token = create_session(db_user.id)
     response.set_cookie(key="session_token", value=token, httponly=True, secure=False, samesite='lax')
     return db_user
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.set_cookie(key="session_token", value='', httponly=True, secure=False, samesite='lax')

@@ -79,6 +79,7 @@ class ConnectionManager:
                         "name": m.sender.username if m.sender else "Unknown",
                         "message": m.content,
                         "time": m.created_at.isoformat(),
+                        "imageUrl": m.attachment_url
                     },
                 },
             }

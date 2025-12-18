@@ -86,6 +86,7 @@ class ChatSend(BaseModel):
 # --- MESSAGE ---
 class MessageCreate(BaseModel):
     content: str
+    imageUrl: str | None = None
 
 
 class MessageRead(BaseModel):
@@ -102,6 +103,7 @@ class MessageSend(BaseModel):
     direction: str
     name: str
     message: str
+    imageUrl: str | None = None
     time: datetime
 
 

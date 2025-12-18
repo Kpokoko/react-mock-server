@@ -205,7 +205,7 @@ async def send_message(chat_id: int, msg: MessageCreate, request: Request, db: A
     if not await is_chat_member(db, user_id, chat_id):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    message = Message(chat_id=chat_id, sender_id=user_id, content=msg.content)
+    message = Message(chat_id=chat_id, sender_id=user_id, content=msg.content, attachment_url=msg.imageUrl)
     db.add(message)
     await db.commit()
 
@@ -257,6 +257,7 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
             name=m.sender.username,
             message=m.content,
             time=m.created_at,
+            imageUrl=m.attachment_url
         ))
     return res
 

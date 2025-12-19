@@ -1,11 +1,12 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, Response, Request, HTTPException
+from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..schemas import UserCreate, UserRead, PostRead, PostCreate, CommentRead, UserUpdateAvatar
-from ..models import User, Post, Comment, Friend
+from ..models import User, Post, Comment, Friend, ImageUser
 from ..db import get_db
 from ..services.session_manager import create_session, get_current_user
 from sqlalchemy.future import select
@@ -64,12 +65,15 @@ async def profile(request: Request, db: AsyncSession = Depends(get_db)):
     subs_res = await db.execute(select(Friend).where(Friend.friend_id == user.id).where(Friend.status == "pending"))
     subscriber_count = len(subs_res.scalars().all())
 
+    images_query = await db.execute(select(ImageUser).where(ImageUser.user_id == user.id))
+    images_count = len(images_query.scalars().all())
+
     res = {
         "userId": user.id,
         "name": user.username,
         "avatarUrl": user.avatar_url,
         "friendCount": friend_count,
-        "photoCount": 20,
+        "photoCount": images_count,
         "subscriberCount": subscriber_count,
         "posts": res_post
     }
@@ -122,12 +126,15 @@ async def other_profile(user_id: int, db: AsyncSession = Depends(get_db)):
     subs_res = await db.execute(select(Friend).where(Friend.friend_id == user.id).where(Friend.status == "pending"))
     subscriber_count = len(subs_res.scalars().all())
 
+    images_query = await db.execute(select(ImageUser).where(and_(ImageUser.user_id == user.id, ImageUser.private == False)))
+    images_count = len(images_query.scalars().all())
+
     res = {
         "userId": user.id,
         "name": user.username,
         "avatarUrl": user.avatar_url,
         "friendCount": friend_count,
-        "photoCount": 20,
+        "photoCount": images_count,
         "subscriberCount": subscriber_count,
         "posts": res_post
     }

@@ -155,3 +155,15 @@ class Settings(Base):
     theme = Column(String, default="light")
 
     user = relationship("User", back_populates="settings")
+
+
+class ImageUser(Base):
+    __tablename__ = "image_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    private = Column(Boolean, default=True)
+    image_id = Column(Integer, ForeignKey('images.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+
+    image = relationship("Image")
+    user = relationship("User")

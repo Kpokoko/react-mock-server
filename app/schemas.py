@@ -177,3 +177,7 @@ class SettingsRead(BaseModel):
 class SettingsUpdate(BaseModel):
     notifications_enabled: Optional[bool] = None
     theme: Optional[str] = None
+
+class GalleryItem(BaseModel):
+    id: int
+    url: str

@@ -76,14 +76,17 @@ class ChatRead(BaseModel):
     class Config:
         orm_mode = True
 
+class ChatMemberSend(BaseModel):
+    id: int
+    username: str
 
 class ChatSend(BaseModel):
     id: int
     name: str
     preview: str
     chatTime: datetime
-    chatBadge: Optional[int] = None
-    chatMembers: list[str] | None = None
+    chatBadge: str | None = None
+    chatMembers: list[ChatMemberSend] | None = None
 
 
 # --- MESSAGE ---

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..schemas import ChatCreate, MessageRead, MessageCreate, ChatSend, MessageSend, ChatMemberAdd
+from ..schemas import ChatCreate, MessageRead, MessageCreate, ChatSend, MessageSend, ChatMemberAdd, ChatMemberSend
 from ..models import Chat, Message, ChatMember, User
 from ..db import get_db
 from ..services.session_manager import get_current_user
@@ -55,7 +55,7 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
         name=chat.name if chat.name else "Undefined",
         preview="...",
         chatTime=datetime.datetime.utcnow(),
-        chatMembers=[user.username for user in users] if users else None,
+        chatMembers=None,
     )
 
 
@@ -129,7 +129,10 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
     # Fetch chat members
     result = await db.execute(select(ChatMember).where(ChatMember.chat_id == chat_id).options(selectinload(ChatMember.user)))
     members = result.scalars().all()
-    member_names = [m.user.username for m in members]
+    member_names = [ChatMemberSend(
+        id = m.user.id,
+        username = m.user.username
+    ) for m in members]
 
     mem = None
     for m in members:
@@ -169,7 +172,10 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
         # Fetch chat members
         result = await db.execute(select(ChatMember).where(ChatMember.chat_id == c.id).options(selectinload(ChatMember.user)))
         members = result.scalars().all()
-        member_names = [m.user.username for m in members]
+        member_names = [ChatMemberSend(
+            id = m.user.id,
+            username = m.user.username
+        ) for m in members]
 
         mem = None
         for m in members:

@@ -269,7 +269,7 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
 
 
 @router.post("/{chat_id}/members")
-async def add_chat_member(chat_id: int, member: ChatMemberAdd, request: Request, db: AsyncSession = Depends(get_db)):
+async def add_chat_member(chat_id: int, members: ChatMemberAdd, request: Request, db: AsyncSession = Depends(get_db)):
     """Add a new member to an existing chat."""
     current_user = get_current_user(request)
     if not current_user:
@@ -285,24 +285,21 @@ async def add_chat_member(chat_id: int, member: ChatMemberAdd, request: Request,
     if not await is_chat_member(db, current_user, chat_id):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # Verify the user to be added exists
-    result = await db.execute(select(User).where(User.id == member.userId))
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    chat_members = []
+    if members.members:
+        result = await db.execute(select(User).where(User.id.in_(members.members)))
+        users = result.scalars().all()
+        if len(users) != len(members.members):
+            raise HTTPException(status_code=404, detail="One or more users not found")
 
-    # Check if the user is already a member of the chat
-    result = await db.execute(select(ChatMember).where(ChatMember.chat_id == chat_id).where(ChatMember.user_id == member.userId))
-    existing_member = result.scalars().first()
-    if existing_member:
-        raise HTTPException(status_code=400, detail="User is already a member of the chat")
+        for member_id in members.members:
+            if member_id != current_user:  # Avoid adding the current user twice
+                chat_members.append(ChatMember(chat_id=chat_id, user_id=member_id))
 
-    # Add the user as a new chat member
-    new_member = ChatMember(chat_id=chat_id, user_id=member.userId)
-    db.add(new_member)
+    db.add_all(chat_members)
     await db.commit()
 
-    return {"message": "User added to chat successfully"}
+    return {"message": "Users added to chat successfully"}
 
 
 @router.delete("/{chat_id}/leave")

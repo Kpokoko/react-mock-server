@@ -148,7 +148,7 @@ class LikeRead(BaseModel):
 
 # --- CHAT MEMBER ---
 class ChatMemberAdd(BaseModel):
-    userId: int
+    members: list[int]
 
 
 # --- FRIEND STATUS ---

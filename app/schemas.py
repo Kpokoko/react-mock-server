@@ -81,6 +81,7 @@ class ChatRead(BaseModel):
 class ChatMemberSend(BaseModel):
     id: int
     username: str
+    avatarUrl: str | None = None
 
 class ChatSend(BaseModel):
     id: int

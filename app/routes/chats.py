@@ -131,7 +131,8 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
     members = result.scalars().all()
     member_names = [ChatMemberSend(
         id = m.user.id,
-        username = m.user.username
+        username = m.user.username,
+        avatarUrl = m.user.avatar_url
     ) for m in members]
 
     mem = None
@@ -177,7 +178,8 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
         members = result.scalars().all()
         member_names = [ChatMemberSend(
             id = m.user.id,
-            username = m.user.username
+            username = m.user.username,
+            avatarUrl = m.user.avatar_url
         ) for m in members]
 
         mem = None

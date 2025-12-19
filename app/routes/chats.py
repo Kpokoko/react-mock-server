@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ..schemas import ChatCreate, MessageRead, MessageCreate, ChatSend, MessageSend, ChatMemberAdd, ChatMemberSend
+from ..schemas import ChatCreate, MessageRead, MessageCreate, ChatSend, MessageSend, ChatMemberAdd, ChatMemberSend, \
+    ChatMemberAdd2
 from ..models import Chat, Message, ChatMember, User
 from ..db import get_db
 from ..services.session_manager import get_current_user
@@ -60,7 +61,7 @@ async def create_chat(chat: ChatCreate, request: Request, db: AsyncSession = Dep
 
 
 @router.post("/private", response_model=ChatSend)
-async def create_private_chat(member: ChatMemberAdd, request: Request, db: AsyncSession = Depends(get_db)):
+async def create_private_chat(member: ChatMemberAdd2, request: Request, db: AsyncSession = Depends(get_db)):
     """Create a private chat between the current user and another user."""
     current_user = get_current_user(request)
     if not current_user:

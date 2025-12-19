@@ -44,7 +44,7 @@ class Chat(Base):
     avatar_url = Column(String(255))
 
     members = relationship("ChatMember", back_populates="chat", cascade="all, delete-orphan")
-    messages = relationship("Message", back_populates="chat", cascade="save-update")
+    messages = relationship("Message", back_populates="chat", cascade="all, delete-orphan")
 
 
 class ChatMember(Base):

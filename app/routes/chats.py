@@ -276,37 +276,63 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
 
 
 @router.post("/{chat_id}/members")
-async def add_chat_member(chat_id: int, members: ChatMemberAdd, request: Request, db: AsyncSession = Depends(get_db)):
-    """Add a new member to an existing chat."""
+async def add_chat_member(
+    chat_id: int,
+    members: ChatMemberAdd,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Add new members to an existing chat."""
     current_user = get_current_user(request)
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    # Verify the chat exists
     result = await db.execute(select(Chat).where(Chat.id == chat_id))
-    chat = result.scalars().first()
+    chat = result.scalar_one_or_none()
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    # Verify the current user is a member of the chat
+    # Check current user is a chat member
     if not await is_chat_member(db, current_user, chat_id):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    chat_members = []
-    if members.members:
-        result = await db.execute(select(User).where(User.id.in_(members.members)))
-        users = result.scalars().all()
-        if len(users) != len(members.members):
-            raise HTTPException(status_code=404, detail="One or more users not found")
+    if not members.members:
+        return {"message": "No users to add"}
 
-        for member_id in members.members:
-            if member_id != current_user:  # Avoid adding the current user twice
-                chat_members.append(ChatMember(chat_id=chat_id, user_id=member_id))
+    # Load users
+    result = await db.execute(
+        select(User).where(User.id.in_(members.members))
+    )
+    users = result.scalars().all()
 
-    db.add_all(chat_members)
+    if len(users) != len(set(members.members)):
+        raise HTTPException(status_code=404, detail="One or more users not found")
+
+    # Get existing chat members
+    result = await db.execute(
+        select(ChatMember.user_id).where(ChatMember.chat_id == chat_id)
+    )
+    existing_user_ids = set(result.scalars().all())
+
+    new_members = []
+    for user in users:
+        if user.id == current_user:
+            continue  # do not add yourself
+        if user.id in existing_user_ids:
+            continue  # already in chat
+
+        new_members.append(
+            ChatMember(chat_id=chat_id, user_id=user.id)
+        )
+
+    if not new_members:
+        return {"message": "No new users were added"}
+
+    db.add_all(new_members)
     await db.commit()
 
     return {"message": "Users added to chat successfully"}
+
 
 
 @router.delete("/{chat_id}/leave")

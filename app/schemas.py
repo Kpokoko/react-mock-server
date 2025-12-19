@@ -37,6 +37,7 @@ class CommentRead(BaseModel):
     postId: int
     userId: int
     username: str
+    avatarUrl: str | None = None
     content: str
     createdAt: datetime
 
@@ -54,6 +55,7 @@ class PostRead(BaseModel):
     postTime: datetime
     text: str
     image: str | None
+    avatarUrl: str | None
     likes: int
     isLiked: bool
     comments: list[CommentRead] | list[str]
@@ -111,6 +113,7 @@ class MessageSend(BaseModel):
     message: str
     imageUrl: str | None = None
     time: datetime
+    avatarUrl: str | None = None
 
 
 # --- IMAGES ---

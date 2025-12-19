@@ -35,6 +35,7 @@ async def profile(request: Request, db: AsyncSession = Depends(get_db)):
                 postId=c.post_id,
                 userId=c.author_id,
                 username=c.author.username,
+                avatarUrl=c.author.avatar_url,
                 content=c.content,
                 createdAt=c.created_at
             )
@@ -47,6 +48,7 @@ async def profile(request: Request, db: AsyncSession = Depends(get_db)):
                 user=post.author.username,
                 userId=post.author.id,
                 postTime=post.created_at,
+                avatarUrl=post.author.avatar_url,
                 text=post.content,
                 image=post.image_url,
                 likes=len(post.likes) if hasattr(post, 'likes') else 0,
@@ -65,6 +67,7 @@ async def profile(request: Request, db: AsyncSession = Depends(get_db)):
     res = {
         "userId": user.id,
         "name": user.username,
+        "avatarUrl": user.avatar_url,
         "friendCount": friend_count,
         "photoCount": 20,
         "subscriberCount": subscriber_count,
@@ -91,6 +94,7 @@ async def other_profile(user_id: int, db: AsyncSession = Depends(get_db)):
                 postId=c.post_id,
                 userId=c.author_id,
                 username=c.author.username,
+                avatarUrl=c.author.avatar_url,
                 content=c.content,
                 createdAt=c.created_at
             )
@@ -103,6 +107,7 @@ async def other_profile(user_id: int, db: AsyncSession = Depends(get_db)):
                 user=post.author.username,
                 userId=post.author.id,
                 postTime=post.created_at,
+                avatarUrl=post.author.avatar_url,
                 text=post.content,
                 image=post.image_url,
                 likes=len(post.likes) if hasattr(post, 'likes') else 0,
@@ -120,6 +125,7 @@ async def other_profile(user_id: int, db: AsyncSession = Depends(get_db)):
     res = {
         "userId": user.id,
         "name": user.username,
+        "avatarUrl": user.avatar_url,
         "friendCount": friend_count,
         "photoCount": 20,
         "subscriberCount": subscriber_count,

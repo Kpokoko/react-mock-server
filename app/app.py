@@ -50,11 +50,8 @@ async def on_startup():
 # ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255),
 # ADD COLUMN IF NOT EXISTS fon_url VARCHAR(255);
 
-
-# try:
-#     init_db(engine)
-# except Exception:
-#     pass
+# ALTER TABLE chat
+# ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255),
 
 @app.get("/")
 async def root():

@@ -45,6 +45,7 @@ async def create_comment(
         postId=comment.post_id,
         userId=user.id,
         username=user.username,
+        avatarUrl=user.avatar_url,
         content=comment.content,
         createdAt=comment.created_at,
     )
@@ -66,6 +67,7 @@ async def list_comments(post_id: int, db: AsyncSession = Depends(get_db)):
             postId=c.post_id,
             userId=c.author.id,
             username=c.author.username,
+            avatarUrl=c.avatar_url,
             content=c.content,
             createdAt=c.created_at,
         )

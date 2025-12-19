@@ -41,6 +41,7 @@ class Chat(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
     is_group = Column(Boolean, default=False)
+    avatar_url = Column(String(255))
 
     members = relationship("ChatMember", back_populates="chat", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="chat", cascade="save-update")

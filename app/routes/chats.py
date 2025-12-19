@@ -141,13 +141,16 @@ async def get_chat(chat_id: int, request: Request, db: AsyncSession = Depends(ge
 
     if not chat.is_group and mem:
         name = mem.username
+        chat_badge = mem.avatar_url
     else:
         name = chat.name
+        chat_badge = chat.avatar_url
 
     return ChatSend(
         id=chat.id,
         name=name if name else "Undefined",
         preview=message.content if message else "...",
+        chatBadge=chat_badge,
         chatTime=message.created_at if message else datetime.datetime.utcnow(),
         chatMembers=member_names,
     )
@@ -184,13 +187,16 @@ async def list_chats(request: Request, db: AsyncSession = Depends(get_db)):
 
         if not c.is_group and mem:
             name = mem.username
+            chat_badge = mem.avatar_url
         else:
             name = c.name
+            chat_badge = c.avatar_url
 
         res.append(ChatSend(
             id=c.id,
             name=name if name else "Undefined",
             preview=message.content if message else "...",
+            chatBadge=chat_badge,
             chatTime=message.created_at if message else datetime.datetime.utcnow(),
             chatMembers=member_names,
         ))
@@ -263,7 +269,8 @@ async def get_messages(request: Request, chat_id: int, db: AsyncSession = Depend
             name=m.sender.username,
             message=m.content,
             time=m.created_at,
-            imageUrl=m.attachment_url
+            imageUrl=m.attachment_url,
+            avatarUrl=m.sender.avatar_url
         ))
     return res
 

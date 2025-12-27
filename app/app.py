@@ -44,8 +44,11 @@ app.include_router(gallery.router)
 
 @app.on_event("startup")
 async def on_startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception:
+        pass
 
 # ALTER TABLE users
 # ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(255),

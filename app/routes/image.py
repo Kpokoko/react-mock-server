@@ -29,10 +29,16 @@ async def upload_image(request: Request, file: UploadFile = File(...), db: Async
     file_ext = os.path.splitext(file.filename)[1]
     unique_name = f"{uuid.uuid4().hex}{file_ext}"
 
+    public_url = (
+    f"{settings.S3_ENDPOINT_URL}/"
+    f"{settings.S3_BUCKET_NAME}/"
+    f"{key}"
+    )
+
     # Сохраняем запись в БД
     image_record = Image(
         filename=unique_name,
-        filepath=key,
+        filepath=public_url,
         content_type=file.content_type,
     )
 
@@ -70,14 +76,18 @@ async def upload_image(request: Request, file: UploadFile = File(...), db: Async
     file_ext = os.path.splitext(file.filename)[1]
     unique_name = f"{uuid.uuid4().hex}{file_ext}"
 
+    public_url = (
+    f"{settings.S3_ENDPOINT_URL}/"
+    f"{settings.S3_BUCKET_NAME}/"
+    f"{key}"
+    )
+
     # Сохраняем запись в БД
     image_record = Image(
         filename=unique_name,
-        filepath=key,
+        filepath=public_url,
         content_type=file.content_type,
     )
-
-
 
     db.add(image_record)
     await db.commit()

@@ -9,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from .db import engine, Base
 import asyncio
 
-app = FastAPI(title="FastAPI Session")
+app = FastAPI(title="FastAPI Session",
+    redirect_slashes=False)
 
 os.makedirs(settings.upload_dir, exist_ok=True)
 

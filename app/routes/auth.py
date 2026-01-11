@@ -14,28 +14,54 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(user: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == user.username))
     existing = result.scalars().first()
+
     if user.password != user.confirmPassword:
         raise HTTPException(status_code=400, detail="Password not correct")
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
+
     user_obj = User(username=user.username, password_hash=hash_password(user.password))
     db.add(user_obj)
     await db.commit()
     await db.refresh(user_obj)
+
     token = create_session(user_obj.id)
-    response.set_cookie(key="session_token", value=token, httponly=True, secure=False, samesite='lax')
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/"
+    )
     return user_obj
+
 
 @router.post("/login", response_model=UserRead)
 async def login(user: UserAuth, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.username == user.username))
     db_user = result.scalars().first()
+
     if not db_user or not check_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
     token = create_session(db_user.id)
-    response.set_cookie(key="session_token", value=token, httponly=True, secure=False, samesite='lax')
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/"
+    )
     return db_user
+
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.set_cookie(key="session_token", value='', httponly=True, secure=False, samesite='lax')
+    response.delete_cookie(
+        key="session_token",
+        path="/",
+        secure=True,
+        samesite="none"
+    )

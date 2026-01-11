@@ -1,5 +1,6 @@
 from typing import List
 
+from app.services.bucket_interaction import upload_image_to_s3
 from fastapi import FastAPI, File, UploadFile, Depends, APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,24 +23,18 @@ async def upload_image(request: Request, file: UploadFile = File(...), db: Async
 
     if not file.content_type.startswith("image/"):
         return JSONResponse(content={"error": "File is not an image"}, status_code=400)
-
-    # Уникальное имя файла
+    
+    key = await upload_image_to_s3(file)
+    
     file_ext = os.path.splitext(file.filename)[1]
     unique_name = f"{uuid.uuid4().hex}{file_ext}"
-    file_path = os.path.join(settings.upload_dir, unique_name)
-
-    # Сохраняем файл
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
 
     # Сохраняем запись в БД
     image_record = Image(
         filename=unique_name,
-        filepath=file_path,
+        filepath=key,
         content_type=file.content_type,
     )
-
-
 
     db.add(image_record)
     await db.commit()
@@ -70,19 +65,15 @@ async def upload_image(request: Request, file: UploadFile = File(...), db: Async
     if not file.content_type.startswith("image/"):
         return JSONResponse(content={"error": "File is not an image"}, status_code=400)
 
-    # Уникальное имя файла
+    key = await upload_image_to_s3(file)
+
     file_ext = os.path.splitext(file.filename)[1]
     unique_name = f"{uuid.uuid4().hex}{file_ext}"
-    file_path = os.path.join(settings.upload_dir, unique_name)
-
-    # Сохраняем файл
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
 
     # Сохраняем запись в БД
     image_record = Image(
         filename=unique_name,
-        filepath=file_path,
+        filepath=key,
         content_type=file.content_type,
     )
 

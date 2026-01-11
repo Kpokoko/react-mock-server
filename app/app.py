@@ -17,7 +17,9 @@ os.makedirs(settings.upload_dir, exist_ok=True)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://example.com",    # продакшн-домен
+    "https://example.com",
+    "https://158.160.168.82:443",
+    "https://dangeon-bucket.website.yandexcloud.net"
 ]
 
 app.add_middleware(
